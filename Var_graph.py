@@ -42,8 +42,8 @@ class Var_graph:
         ttk.Button(buttonrow2, text="Close", command=self.close).pack(side=LEFT,padx=15)
         buttonrow2.pack(side=BOTTOM,pady=5)
 
-        log = Text(height=20,width=50)
-        log.pack(side=RIGHT, padx=10,pady=10)
+        self.log = Text(height=20,width=50)
+        self.log.pack(side=RIGHT, padx=10,pady=10)
 
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
@@ -180,7 +180,7 @@ class Var_graph:
 
         except EXCEPTION as e:
             print(f"{e}")
-
+        self.logprint("Done Writting to local")
 if __name__ == '__main__':
     root = Tk()
     app = Var_graph(root)
