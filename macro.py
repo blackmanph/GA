@@ -11,14 +11,19 @@ import xlsxwriter
 import os
 import math
 from numbers import Number
+import ast
 
 class Macro:
-
-    search_word = "Sample Name"
-    sheet_name = "Results"
-    starting_word = "Well"
-    filter_word = ["Sample Name", "Ct Mean","Ct SD"]
-    sample =[]
+    SHEET_COL = ["CP/ul","Initial Volume analyzed (mL)","Final Concentrate Volume (mL)","Volume used for Extraction (ml)"
+                 ,"Final RNA Extraction Volume (ul)","CP/100 ml of Sample","Detection Limit (CP/100ml)","Marker Detected?","Droplet QC Pass"]
+    DDPCR_COL = ["Sample","PCRType","TargetDetected"
+                 ,"DetectedNotQuantifiable","QualityControlPassed","ControlQCPass?","DropletQCPass","DetectionLowerLimit"
+                 ,"N1GeneCopies","N2GeneCopies","EGeneCopies","Phi6GeneCopies"
+                 ,"Comments","SampleStartTime (HHMM 24-hr)","PCRResultDate (YYMMDD)","FlowRate (in MGD)","PMMoVGeneCopies/100ml"]
+    RSV_COL = ["Sample","PCRType","RSVTargetDetected","SC2TargetDetected","NVG1TargetDetected","NVG2TargetDetected"
+               ,"DetectedNotQuantifiable","QualityControlPassed","ControlQCPass?","DropletQCPass","DetectionLowerLimit"
+               ,"RSVGeneCopies","SC2GeneCopies","NVG1GeneCopies","NVG2GeneCopies","Phi6GeneCopies"
+               ,"Comments","SampleStartTime (HHMM 24-hr)","PCRResultDate (YYMMDD)","FlowRate (in MGD)","PMMoVGeneCopies/100ml"]
 
     wb = openpyxl.Workbook()
     red_fill = PatternFill(patternType='solid', fgColor= '00FF0000')
@@ -88,8 +93,9 @@ class Macro:
                                                             "*.*")]))
         
     def inputfile(self):
-        raw_input.set(filedialog.askopenfilename(filetypes=[("CVS files", "*.csv"),("all files",
+        raw_input.set(filedialog.askopenfilenames(parent=self.root,filetypes=[("CSV files", "*.csv"),("all files",
                                                             "*.*")]))
+
         entry1.xview_moveto(1)
         
     def saveresult(self):
@@ -142,25 +148,72 @@ class Macro:
 
     def result(self):
         print("hello")
-        try:
-            master_df = pd.read_excel(master_input.get(),clicked2.get())
-            raw_df = pd.read_csv(raw_input.get())
-        except EXCEPTION as e :
-            print(f"{e}")   
-        filtered_df = raw_df[raw_df["Target"].apply(lambda x: not x.isnumeric())]
-        filtered_df = filtered_df[["Sample description 1","Target","Copies/20µLWell","Accepted Droplets","Positives"]].copy()
-        target_list = filtered_df["Target"].unique()
-        print(filtered_df.head)
+        paths= list(ast.literal_eval(raw_input.get()))
+        master_df = pd.read_excel(master_input.get(),clicked2.get())
+        overall_df = pd.DataFrame()
+        for file_path in paths:
+            try:
 
-        df_dict = {target: pd.DataFrame(columns=filtered_df.columns) for target in target_list}
+                raw_df = pd.read_csv(file_path,index_col=False)
+            except EXCEPTION as e :
+                print(f"{e}")
+        # while True:
+        #     raw_df = pd.read_csv(paths,index_col=False)   
+            filtered_df = raw_df[raw_df["Target"].apply(lambda x: not x.isnumeric())]
+            if "CopiesPer20uLWell" or "AcceptedDroplets"in filtered_df.columns:
+                filtered_df = filtered_df.rename(columns={"CopiesPer20uLWell": "Copies/20µLWell","AcceptedDroplets": "Accepted Droplets"})
+            if "Sample description 1" in filtered_df.columns:
+                filtered_df = filtered_df.rename(columns={"Sample description 1": "Sample"})
+            print(filtered_df.columns)
+            filtered_df = filtered_df[["Sample","Target","Copies/20µLWell","Accepted Droplets","Positives"]].copy()
+                
+            print(filtered_df.head)
+            overall_df = pd.concat([overall_df,filtered_df],ignore_index=True)
+
+        target_list = overall_df["Target"].unique()
+        df_dict = {target: pd.DataFrame(columns=overall_df.columns.tolist()+self.SHEET_COL) for target in target_list}
         print(df_dict.keys())
-        for index, rows in filtered_df.iterrows():
+        for index, rows in overall_df.iterrows():
             if rows["Target"] in df_dict:
 
                 # df_dict[rows["Target"]] = pd.DataFrame(rows)  
                 df_dict[rows["Target"]] = pd.concat([df_dict[rows["Target"]], pd.DataFrame([rows])], ignore_index=True)
-                print(df_dict[rows["Target"]])
-        print(df_dict)
+                # print(df_dict[rows["Target"]])
+        # print(df_dict)
+        for key in df_dict:
+            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace(' ', '_')
+            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace('COV','POS')
+            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace('PHI','POS')
+            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace('RSV','POS')
+            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace('NV','POS')
+
+            for index, row in df_dict[key].iterrows():   
+                master_id = row["Sample"]
+                if not pd.isna(master_id):
+                    matching_row_df2 = master_df[master_df['[Sample ID]'].astype(str).str.contains(str(master_id))]
+                if not matching_row_df2.empty:
+            # Extract the value from the matching row in df2
+                    for indexs in matching_row_df2.index:
+                        concern = matching_row_df2.loc[indexs, '[Final Concentrate Volume (mL)]']
+                        # dilution = matching_row_df2.loc[indexs, '[Dilution factor]']
+                        df_dict[key].loc[index, "Final Concentrate Volume (mL)"] = concern
+                        # df_dict[key].loc[index,"Dilution Factor"] = dilution
+
+            df_dict[key].sort_values(by='Sample', inplace=True)
+            df_dict[key]["CP/ul"] = df_dict[key]["Copies/20µLWell"]/5
+            df_dict[key]["Initial Volume analyzed (mL)"] = 100
+            df_dict[key]["Volume used for Extraction (ml)"] = 0.2
+            df_dict[key]["Final RNA Extraction Volume (ul)"] = 80
+            df_dict[key]["Detection Limit (CP/100ml)"] = (0.6 * df_dict[key]['Final RNA Extraction Volume (ul)']) * ((df_dict[key]['Final Concentrate Volume (mL)'] / df_dict[key]['Volume used for Extraction (ml)']) / df_dict[key]['Initial Volume analyzed (mL)']) * 100
+            df_dict[key]["CP/100 ml of Sample"] = np.where(df_dict[key]['Accepted Droplets'] >= 3, (((df_dict[key]['CP/ul'] * df_dict[key]['Final RNA Extraction Volume (ul)']) * (df_dict[key]['Final Concentrate Volume (mL)'] / df_dict[key]['Volume used for Extraction (ml)'])) / df_dict[key]['Initial Volume analyzed (mL)']) * 100, df_dict[key]['Detection Limit (CP/100ml)'])
+            df_dict[key]["Marker Detected?"] = np.where((df_dict[key]['Accepted Droplets'] >= 3) & (df_dict[key]['Positives'] >= 8000), 1, 0)
+            df_dict[key]["Droplet QC Pass"] = np.where(df_dict[key]['Positives']>=8000,1,0)
+
+            # print(df_dict[key]["Final Concentrate Volume (mL)"])
+        with pd.ExcelWriter(output.get(), engine='xlsxwriter') as writer:
+            # Iterate through the df_dict and write each DataFrame to a new sheet
+            for key, df in df_dict.items():
+                df.to_excel(writer, sheet_name=key, index=False)
 
 
     def clear(self):
