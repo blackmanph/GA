@@ -38,12 +38,13 @@ class Macro:
         self.create_widgets()
 
     def create_widgets(self):
-        global raw_input,output,master_input,entry1,entry4
+        global raw_input,output_excel,entry1,entry4,cov_output,rsv_output,entry3,entry2
 
         raw_input = StringVar()
-        output = StringVar()
-        master_input = StringVar()
-        clicked2 = StringVar()
+        output_excel = StringVar()
+        # master_input = StringVar()
+        cov_output = StringVar()
+        rsv_output = StringVar()
         try:
             raw_input.set(pickle.load(open( "pref.dat", "rb" )))
         except:
@@ -63,7 +64,7 @@ class Macro:
 
 
         row1 = ttk.Frame(frm)
-        ttk.Button(row1, width=25, text="Load Raw data:", command=self.inputfile).pack(side=LEFT,padx=5)
+        ttk.Button(row1, width=15, text="Load Raw data:", command=self.inputfile).pack(side=LEFT,padx=5)
         entry1 = ttk.Entry(row1,width=40,textvariable=raw_input)
         entry1.config(state="readonly")
         row1.pack(side=TOP, padx=5, pady=5)
@@ -76,11 +77,24 @@ class Macro:
         # buttonrow3.pack(side=TOP,pady=5)
 
         row4 = ttk.Frame(frm)
-        ttk.Button(row4, width=25, text="Save results as:", command=self.saveresult).pack(side=LEFT,padx=5)
-        entry4 = ttk.Entry(row4,width=40,textvariable=output)
+        ttk.Button(row4, width=15, text="Save Excel as:", command=self.saveresult).pack(side=LEFT,padx=5)
+        entry4 = ttk.Entry(row4,width=40,textvariable=output_excel)
         entry4.config(state="readonly")
         row4.pack(side=TOP, padx=5, pady=5)
         entry4.pack(side=RIGHT, expand=YES, fill=X)
+
+        row2 = ttk.Frame(frm)
+        ttk.Button(row2, width=15, text="Save cov result as:", command=self.savecov).pack(side=LEFT,padx=5)
+        entry2 = ttk.Entry(row2,width=15,textvariable=cov_output)
+        entry2.config(state="readonly")
+        entry2.pack(side=LEFT, expand=YES, fill=X)
+        ttk.Button(row2, width=15, text="Save rsv result as:", command=self.saversv).pack(side=LEFT,padx=5)
+        entry3 = ttk.Entry(row2,width=15,textvariable=rsv_output)
+        entry3.config(state="readonly")
+        row2.pack(side=TOP, padx=5, pady=5)
+
+        entry3.pack(side=LEFT, expand=YES, fill=X)
+
 
         buttonrow2 = ttk.Frame(frm)
         ttk.Button(buttonrow2, text="Load", command=self.loadraw).pack(side=LEFT,padx=15)
@@ -98,6 +112,18 @@ class Macro:
     #     master_input.set(filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx"),("all files",
     #                                                         "*.*")]))
         
+    def savecov(self):
+        cov_output.set(filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("text files", "*.txt"),("all files",
+                                                            "*.*")]))
+
+        entry2.xview_moveto(1)
+
+    def saversv(self):
+        rsv_output.set(filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("text files", "*.txt"),("all files",
+                                                            "*.*")]))
+
+        entry3.xview_moveto(1)
+
     def inputfile(self):
         raw_input.set(filedialog.askopenfilenames(parent=self.root,filetypes=[("CSV files", "*.csv"),("all files",
                                                             "*.*")]))
@@ -105,7 +131,7 @@ class Macro:
         entry1.xview_moveto(1)
         
     def saveresult(self):
-        output.set(filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("Excel files", "*.xlsx"),("all files",
+        output_excel.set(filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("Excel files", "*.xlsx"),("all files",
                                                             "*.*")]))
         entry4.xview_moveto(1)
 
@@ -202,8 +228,14 @@ class Macro:
         
         input_df = pd.DataFrame({"Sample": overall_df["Sample"].dropna().unique()})
         input_df["Final Concentrate Volume (mL)"] = None
-        with pd.ExcelWriter(output.get(), engine='openpyxl', mode='w') as writer:
+        with pd.ExcelWriter(output_excel.get(), engine='openpyxl', mode='w') as writer:
             input_df.to_excel(writer,sheet_name="input",index=False)
+        
+        self.logprint("Done import, Go to the Excel and input Concentration.")
+        try:
+            os.system(f'start excel "{output_excel.get()}"')
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     def output_to_compile_sheet(self, df,df_dict):
         if not df.empty:
@@ -266,9 +298,22 @@ class Macro:
                     df.loc[index,"QualityControlPassed"] = 'No'  
         return df
 
+    def output_df_text(self,df):
+        result_df = pd.DataFrame(columns=df.columns)
+        col_index = df.columns.get_loc('Comments')
+        for index, row in df.iterrows():
+            sample_id = row["Sample"]
+            if not any(prefix in sample_id for prefix in ["EXT", "NTC", "POS", "NEG"]):
+                result_df.loc[len(result_df.index)] = row
+        result_df = result_df.drop(columns=list(result_df.columns[col_index:]))
+        result_df = result_df.drop(columns=["ControlQCPass?","DropletQCPass"])
+        return result_df
+
+
+
     def result(self):
         # writer = pd.ExcelWriter(output.get(), engine='xlsxwriter')
-        master_df = pd.read_excel(output.get(),sheet_name="input")
+        master_df = pd.read_excel(output_excel.get(),sheet_name="input")
         cov_result_df = pd.DataFrame(columns = self.DDPCR_COL)
         rsv_result_df = pd.DataFrame(columns = self.RSV_COL)
         df_dict_mean ={}
@@ -371,21 +416,30 @@ class Macro:
         # OUTPUT TO COMPILE RESULT FOR CoV
         cov_result_df = self.output_to_compile_sheet(cov_result_df,df_dict)
         rsv_result_df = self.output_to_compile_sheet(rsv_result_df,df_dict)
-        print(rsv_result_df.head)
+        # print(rsv_result_df.head)
 
             # Iterate through the df_dict and write each DataFrame to a new sheet
-        with pd.ExcelWriter(output.get(), engine='openpyxl', mode='a') as writer:
+        with pd.ExcelWriter(output_excel.get(), engine='openpyxl', mode='a') as writer:
             cov_result_df.to_excel(writer,sheet_name="cov",index=False)
             rsv_result_df.to_excel(writer,sheet_name="rsv",index=False)
             for key, df in df_dict.items():
                 df.to_excel(writer, sheet_name=key, index=False)
-
-
+        
+        df = self.output_df_text(cov_result_df)
+        if cov_output.get():
+            df.to_csv(cov_output.get(),sep='\t', index=False)
+        df = self.output_df_text(rsv_result_df)
+        if rsv_output.get():
+            df.to_csv(rsv_output.get(),sep='\t', index=False)
+        self.logprint("Done output")
 
     def clear(self):
         global sheet_names
         raw_input.set("")
-        master_input.set("")
+        output_excel.set("")
+        # master_input.set("")
+        cov_output.set("")
+        rsv_output.set("")
         sheet_names = []
         self.log.delete(1.0, END) 
         
