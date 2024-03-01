@@ -25,18 +25,21 @@ class Macro:
                ,"RSVGeneCopies","SC2GeneCopies","NVG1GeneCopies","NVG2GeneCopies","Phi6GeneCopies"
                ,"Comments","SampleStartTime (HHMM 24-hr)","PCRResultDate (YYMMDD)","FlowRate (in MGD)","PMMoVGeneCopies/100ml"]
 
+    RSV_LIST = ["RSV","SC2","NVG1","NVG2","Phi6"]
+    COV_LIST = ["N1","N2","Phi6"]
     wb = openpyxl.Workbook()
     red_fill = PatternFill(patternType='solid', fgColor= '00FF0000')
 
 
     def __init__(self, root):
         self.root = root
-        self.root.title("PMMoV Calculation")
+        self.root.title("Macro")
 
         self.create_widgets()
 
     def create_widgets(self):
-        global raw_input,output,master_input,entry1,entry4,clicked2,drop2
+        global raw_input,output,master_input,entry1,entry4
+
         raw_input = StringVar()
         output = StringVar()
         master_input = StringVar()
@@ -49,19 +52,15 @@ class Macro:
         frm = ttk.Frame(self.root, padding=10)
         frm.pack(side=LEFT)
 
-        row5 = ttk.Frame(frm)
-        ttk.Button(row5, width=25, text="Load Master sheet:", command=self.inputmaster).pack(side=LEFT,padx=5)
-        entry5 = ttk.Entry(row5,width=40,textvariable=master_input)
-        entry5.config(state="readonly")
-        row5.pack(side=TOP, padx=5, pady=5)
-        entry5.pack(side=RIGHT, expand=YES, fill=X)
-        entry5.xview_moveto(1)
+        # row5 = ttk.Frame(frm)
+        # ttk.Button(row5, width=25, text="Load Master sheet:", command=self.inputmaster).pack(side=LEFT,padx=5)
+        # entry5 = ttk.Entry(row5,width=40,textvariable=master_input)
+        # entry5.config(state="readonly")
+        # row5.pack(side=TOP, padx=5, pady=5)
+        # entry5.pack(side=RIGHT, expand=YES, fill=X)
+        # entry5.xview_moveto(1)
 
-        buttonrow3 = ttk.Frame(frm)
-        ttk.Button(buttonrow3, text="Load", command=self.loadmaster).pack(side=LEFT,padx=15)
-        drop2 = OptionMenu(buttonrow3,clicked2, [])
-        drop2.pack(side=LEFT,pady=5)
-        buttonrow3.pack(side=TOP,pady=5)
+
 
         row1 = ttk.Frame(frm)
         ttk.Button(row1, width=25, text="Load Raw data:", command=self.inputfile).pack(side=LEFT,padx=5)
@@ -69,6 +68,12 @@ class Macro:
         entry1.config(state="readonly")
         row1.pack(side=TOP, padx=5, pady=5)
         entry1.pack(side=RIGHT, expand=YES, fill=X)
+        entry1.xview_moveto(1)
+
+        # buttonrow3 = ttk.Frame(frm)
+        # drop2 = OptionMenu(buttonrow3,clicked2, [])
+        # drop2.pack(side=LEFT,pady=5)
+        # buttonrow3.pack(side=TOP,pady=5)
 
         row4 = ttk.Frame(frm)
         ttk.Button(row4, width=25, text="Save results as:", command=self.saveresult).pack(side=LEFT,padx=5)
@@ -78,6 +83,7 @@ class Macro:
         entry4.pack(side=RIGHT, expand=YES, fill=X)
 
         buttonrow2 = ttk.Frame(frm)
+        ttk.Button(buttonrow2, text="Load", command=self.loadraw).pack(side=LEFT,padx=15)
         ttk.Button(buttonrow2, text="Run", command=self.result).pack(side=LEFT,padx=15)
         ttk.Button(buttonrow2, text="Clear", command=self.clear).pack(side=LEFT,padx=15)
         ttk.Button(buttonrow2, text="Close", command=self.close).pack(side=LEFT,padx=15)
@@ -88,9 +94,9 @@ class Macro:
 
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
-    def inputmaster(self):
-        master_input.set(filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx"),("all files",
-                                                            "*.*")]))
+    # def inputmaster(self):
+    #     master_input.set(filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx"),("all files",
+    #                                                         "*.*")]))
         
     def inputfile(self):
         raw_input.set(filedialog.askopenfilenames(parent=self.root,filetypes=[("CSV files", "*.csv"),("all files",
@@ -111,28 +117,28 @@ class Macro:
         self.log.insert(END, text + '\n')
 
 
-    def updatedropdown(self):
-        global clicked2, drop2
-        drop2['menu'].delete(0,'end')
-        clicked2.set(sheet_names[0])
-        for name in sheet_names:
-            drop2['menu'].add_command(label=name, command=lambda name=name: clicked2.set(name))
+    # def updatedropdown(self):
+    #     global clicked2, drop2
+    #     drop2['menu'].delete(0,'end')
+    #     clicked2.set(sheet_names[0])
+    #     for name in sheet_names:
+    #         drop2['menu'].add_command(label=name, command=lambda name=name: clicked2.set(name))
 
-    def loadmaster(self):
-        global sheet_names, wb
-        sheet_names = []
-        try:
-            wb = openpyxl.load_workbook(master_input.get())
-            sheet_names = wb.sheetnames
+    # def loadmaster(self):
+    #     global sheet_names, wb
+    #     sheet_names = []
+    #     try:
+    #         wb = openpyxl.load_workbook(master_input.get())
+    #         sheet_names = wb.sheetnames
 
-        except:
-            self.logprint("cant open the file")
-        if not sheet_names:
-            self.logprint("No sheets found")
-            return
-        else:
-            self.updatedropdown()
-        self.logprint("- Loading Master sheets done !")
+    #     except:
+    #         self.logprint("cant open the file")
+    #     if not sheet_names:
+    #         self.logprint("No sheets found")
+    #         return
+    #     else:
+    #         self.updatedropdown()
+    #     self.logprint("- Loading Master sheets done !")
 
 
     def output_to_Excel(self,data,name):
@@ -146,11 +152,34 @@ class Macro:
             return 1
         
 
-    def result(self):
-        print("hello")
+        
+
+    # Define a custom sort key function
+    def custom_sort_key(self,sample_id):
+        custom_sort_order = ["EXT", "POS", "NTC", "NEG"]
+        prefix = next((p for p in custom_sort_order if sample_id.startswith(p)), None)
+        if prefix is None:
+            # Use a default value for sorting if prefix is not found
+            return (len(custom_sort_order), sample_id)
+        else:
+            rest_of_string = sample_id[len(prefix):]
+            return (custom_sort_order.index(prefix), rest_of_string)
+
+
+    def loadraw(self):
+        global paths,overall_df
+        replacements = {
+                ' ': '_',
+                'COV': 'POS',
+                'PHI': 'POS',
+                'RSV': 'POS',
+                'NV': 'POS',
+            }
+
         paths= list(ast.literal_eval(raw_input.get()))
-        master_df = pd.read_excel(master_input.get(),clicked2.get())
+        # master_df = pd.read_excel(master_input.get(),clicked2.get())
         overall_df = pd.DataFrame()
+
         for file_path in paths:
             try:
 
@@ -159,20 +188,93 @@ class Macro:
                 print(f"{e}")
         # while True:
         #     raw_df = pd.read_csv(paths,index_col=False)   
-            filtered_df = raw_df[raw_df["Target"].apply(lambda x: not x.isnumeric())]
+            filtered_df = raw_df[raw_df["Target"].apply(lambda x: not str(x).isnumeric())]
             if "CopiesPer20uLWell" or "AcceptedDroplets"in filtered_df.columns:
                 filtered_df = filtered_df.rename(columns={"CopiesPer20uLWell": "Copies/20µLWell","AcceptedDroplets": "Accepted Droplets"})
             if "Sample description 1" in filtered_df.columns:
                 filtered_df = filtered_df.rename(columns={"Sample description 1": "Sample"})
-            print(filtered_df.columns)
             filtered_df = filtered_df[["Sample","Target","Copies/20µLWell","Accepted Droplets","Positives"]].copy()
-                
-            print(filtered_df.head)
-            overall_df = pd.concat([overall_df,filtered_df],ignore_index=True)
 
-        target_list = overall_df["Target"].unique()
+            for key, value in replacements.items():
+                filtered_df['Sample'] = filtered_df['Sample'].str.replace(key, value)
+            
+            overall_df = pd.concat([overall_df,filtered_df],ignore_index=True)
+        
+        input_df = pd.DataFrame({"Sample": overall_df["Sample"].dropna().unique()})
+        input_df["Final Concentrate Volume (mL)"] = None
+        with pd.ExcelWriter(output.get(), engine='openpyxl', mode='w') as writer:
+            input_df.to_excel(writer,sheet_name="input",index=False)
+
+    def output_to_compile_sheet(self, df,df_dict):
+        if not df.empty:
+            df["PCRType"] = "ddPCR"
+            df["DetectedNotQuantifiable"] = "No"
+
+            df["SortKey"] = df["Sample"].apply(self.custom_sort_key)
+            df = df.sort_values(by="SortKey").drop(columns="SortKey")
+
+            for index, row in df.iterrows():
+                sample_id = row["Sample"]
+                droplet_mean_list = {}
+                control_mean_list = {}
+                for key in df_dict:
+                    match_df = df_dict[key][df_dict[key]["Sample"].astype(str).str.contains(str(sample_id))]
+                    if not match_df.empty:
+                        droplet_mean_list[key] = match_df['Droplet QC Pass'].mean()
+                        control_mean_list[key] = match_df["Marker Detected?"].mean()
+
+                if any(value > 0.6 for value in droplet_mean_list.values()):
+                    df.loc[index,"DropletQCPass"] = "No"
+                else:
+                    df.loc[index,"DropletQCPass"] = "Yes"
+
+                if any(prefix in sample_id for prefix in ["EXT", "NTC", "POS", "NEG"]):
+
+                    if "TargetDetected" in df.columns:
+                        df.loc[index,"TargetDetected"] = "N/A"
+                    else:
+                        df.loc[index,"RSVTargetDetected"] = "N/A"
+                        df.loc[index,"SC2TargetDetected"] = "N/A"
+                        df.loc[index,"NVG1TargetDetected"] = "N/A"
+                        df.loc[index,"NVG2TargetDetected"] = "N/A"
+
+                    if any(value > 0.6 for value in control_mean_list.values()):
+                        df.loc[index,"ControlQCPass?"] = "No"
+                    else:
+                        df.loc[index,"ControlQCPass?"] = "Yes"
+                else:
+                    if all((df.loc[df["Sample"].str.contains(prefix), "ControlQCPass?"] == "Yes").all() for prefix in ["EXT", "NTC", "POS", "NEG"]) and \
+                        df.loc[index,["DropletQCPass"]].iloc[0] == "Yes":
+                        df.loc[index,"ControlQCPass?"] = 'Yes'
+                    else:
+                        df.loc[index,"ControlQCPass?"] = 'No'
+                    if "TargetDetected" in df.columns:
+                        if any(value > 0.3 for value in control_mean_list.values()):
+                            df.loc[index,"TargetDetected"] = "Yes"
+                        else:
+                            df.loc[index,"TargetDetected"] = "No"
+                    else:
+                        target_columns = ["RSV", "SC2", "NVG1", "NVG2"]
+
+                        for column in target_columns:
+                            target_detected_column = f"{column}TargetDetected"
+                            target_value = "Yes" if control_mean_list.get(column, 0) > 0.3 else "No"
+                            df.loc[index, target_detected_column] = target_value
+                if df.loc[index,"DropletQCPass"] == 'Yes' and df.loc[index, "ControlQCPass?"] == 'Yes':
+                    df.loc[index,"QualityControlPassed"] = 'Yes'
+                else:
+                    df.loc[index,"QualityControlPassed"] = 'No'  
+        return df
+
+    def result(self):
+        # writer = pd.ExcelWriter(output.get(), engine='xlsxwriter')
+        master_df = pd.read_excel(output.get(),sheet_name="input")
+        cov_result_df = pd.DataFrame(columns = self.DDPCR_COL)
+        rsv_result_df = pd.DataFrame(columns = self.RSV_COL)
+        df_dict_mean ={}
+
+        target_list = overall_df["Target"].dropna().unique()
         df_dict = {target: pd.DataFrame(columns=overall_df.columns.tolist()+self.SHEET_COL) for target in target_list}
-        print(df_dict.keys())
         for index, rows in overall_df.iterrows():
             if rows["Target"] in df_dict:
 
@@ -181,48 +283,110 @@ class Macro:
                 # print(df_dict[rows["Target"]])
         # print(df_dict)
         for key in df_dict:
-            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace(' ', '_')
-            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace('COV','POS')
-            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace('PHI','POS')
-            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace('RSV','POS')
-            df_dict[key]['Sample'] = df_dict[key]['Sample'].str.replace('NV','POS')
-
             for index, row in df_dict[key].iterrows():   
                 master_id = row["Sample"]
                 if not pd.isna(master_id):
-                    matching_row_df2 = master_df[master_df['[Sample ID]'].astype(str).str.contains(str(master_id))]
-                if not matching_row_df2.empty:
-            # Extract the value from the matching row in df2
-                    for indexs in matching_row_df2.index:
-                        concern = matching_row_df2.loc[indexs, '[Final Concentrate Volume (mL)]']
-                        # dilution = matching_row_df2.loc[indexs, '[Dilution factor]']
-                        df_dict[key].loc[index, "Final Concentrate Volume (mL)"] = concern
-                        # df_dict[key].loc[index,"Dilution Factor"] = dilution
+                    matching_row_df2 = master_df[master_df['Sample'].astype(str).str.contains(str(master_id))]
+                    if not matching_row_df2.empty:
+                # Extract the value from the matching row in df2
+                        for indexs in matching_row_df2.index:
+                            concern = matching_row_df2.loc[indexs, 'Final Concentrate Volume (mL)']
+                            # dilution = matching_row_df2.loc[indexs, '[Dilution factor]']
+                            if not np.isnan(concern):
+                                df_dict[key].loc[index, "Final Concentrate Volume (mL)"] = concern
+                                # df_dict[key].loc[index,"Dilution Factor"] = dilution
+                #             else:
+                #                 df_dict[key].loc[index, "Final Concentrate Volume (mL)"] = 100
+                # else:
+                #     df_dict[key].loc[index, "Final Concentrate Volume (mL)"] = 100
 
             df_dict[key].sort_values(by='Sample', inplace=True)
             df_dict[key]["CP/ul"] = df_dict[key]["Copies/20µLWell"]/5
             df_dict[key]["Initial Volume analyzed (mL)"] = 100
             df_dict[key]["Volume used for Extraction (ml)"] = 0.2
             df_dict[key]["Final RNA Extraction Volume (ul)"] = 80
-            df_dict[key]["Detection Limit (CP/100ml)"] = (0.6 * df_dict[key]['Final RNA Extraction Volume (ul)']) * ((df_dict[key]['Final Concentrate Volume (mL)'] / df_dict[key]['Volume used for Extraction (ml)']) / df_dict[key]['Initial Volume analyzed (mL)']) * 100
-            df_dict[key]["CP/100 ml of Sample"] = np.where(df_dict[key]['Accepted Droplets'] >= 3, (((df_dict[key]['CP/ul'] * df_dict[key]['Final RNA Extraction Volume (ul)']) * (df_dict[key]['Final Concentrate Volume (mL)'] / df_dict[key]['Volume used for Extraction (ml)'])) / df_dict[key]['Initial Volume analyzed (mL)']) * 100, df_dict[key]['Detection Limit (CP/100ml)'])
+            df_dict[key]["Detection Limit (CP/100ml)"] = (0.6 * df_dict[key]['Final RNA Extraction Volume (ul)']) \
+                * ((df_dict[key]['Final Concentrate Volume (mL)'] / df_dict[key]['Volume used for Extraction (ml)']) / df_dict[key]['Initial Volume analyzed (mL)']) * 100
+            df_dict[key]["CP/100 ml of Sample"] = np.where(df_dict[key]['Accepted Droplets'] >= 3, \
+                (((df_dict[key]['CP/ul'] * df_dict[key]['Final RNA Extraction Volume (ul)']) * \
+                (df_dict[key]['Final Concentrate Volume (mL)'] / df_dict[key]['Volume used for Extraction (ml)'])) / df_dict[key]['Initial Volume analyzed (mL)']) * 100, df_dict[key]['Detection Limit (CP/100ml)'])
             df_dict[key]["Marker Detected?"] = np.where((df_dict[key]['Accepted Droplets'] >= 3) & (df_dict[key]['Positives'] >= 8000), 1, 0)
             df_dict[key]["Droplet QC Pass"] = np.where(df_dict[key]['Positives']>=8000,1,0)
 
             # print(df_dict[key]["Final Concentrate Volume (mL)"])
-        with pd.ExcelWriter(output.get(), engine='xlsxwriter') as writer:
+            result = df_dict[key].groupby('Sample')[['CP/100 ml of Sample', 'Detection Limit (CP/100ml)']].mean().reset_index()
+
+            df_dict_mean[f'{key}_mean'] = result
+            col_name = ""
+            if key in self.COV_LIST:
+                cov_result_df["EGeneCopies"] = 0
+
+                if key == 'N1':
+                    col_name = "N1GeneCopies"
+                elif key == 'N2':
+                    col_name = "N2GeneCopies"
+                elif key == 'Phi6':
+                    col_name = "Phi6GeneCopies"
+                elif key == 'EG':
+                    col_name == "EGeneCopies"
+                for index, row in df_dict_mean[f'{key}_mean'].iterrows():   
+                    master_id = row["Sample"]
+                    if not pd.isna(master_id):
+                        matching_row_df2 = cov_result_df[cov_result_df['Sample'].astype(str).str.contains(str(master_id))]
+                    if not matching_row_df2.empty:
+                # Extract the value from the matching row in df2
+                        cov_result_df.loc[matching_row_df2.index,col_name] = row["CP/100 ml of Sample"]
+                        cov_result_df.loc[matching_row_df2.index,"DetectionLowerLimit"] = row["Detection Limit (CP/100ml)"]
+                    else:
+                        cov_result_df.loc[len(cov_result_df.index),"Sample"] = master_id
+                        cov_result_df.loc[len(cov_result_df.index)-1, col_name] = row["CP/100 ml of Sample"]
+                        cov_result_df.loc[len(cov_result_df.index)-1, "DetectionLowerLimit"] = row["Detection Limit (CP/100ml)"]
+
+
+            elif key in self.RSV_LIST:
+                if key == 'RSV':
+                    col_name = "RSVGeneCopies"
+                elif key == 'SC2':
+                    col_name = "SC2GeneCopies"
+                elif key == 'Phi6':
+                    col_name = "Phi6GeneCopies"
+                elif key == 'NVG1':
+                    col_name = "NVG1GeneCopies"
+                elif key == 'NVG2':
+                    col_name = "NVG2GeneCopies"
+                for index, row in df_dict_mean[f'{key}_mean'].iterrows():   
+                    master_id = row["Sample"]
+                    if not pd.isna(master_id):
+                        matching_row_df2 = rsv_result_df[rsv_result_df['Sample'].astype(str).str.contains(str(master_id))]
+                    if not matching_row_df2.empty:
+                # Extract the value from the matching row in df2
+                        rsv_result_df.loc[matching_row_df2.index,col_name] = row["CP/100 ml of Sample"]
+                        rsv_result_df.loc[matching_row_df2.index,"DetectionLowerLimit"] = row["Detection Limit (CP/100ml)"]
+                    else:
+                        rsv_result_df.loc[len(rsv_result_df.index),"Sample"] = master_id
+                        rsv_result_df.loc[len(rsv_result_df.index)-1, col_name] = row["CP/100 ml of Sample"]
+                        rsv_result_df.loc[len(rsv_result_df.index)-1, "DetectionLowerLimit"] = row["Detection Limit (CP/100ml)"]
+                    
+
+        # OUTPUT TO COMPILE RESULT FOR CoV
+        cov_result_df = self.output_to_compile_sheet(cov_result_df,df_dict)
+        rsv_result_df = self.output_to_compile_sheet(rsv_result_df,df_dict)
+        print(rsv_result_df.head)
+
             # Iterate through the df_dict and write each DataFrame to a new sheet
+        with pd.ExcelWriter(output.get(), engine='openpyxl', mode='a') as writer:
+            cov_result_df.to_excel(writer,sheet_name="cov",index=False)
+            rsv_result_df.to_excel(writer,sheet_name="rsv",index=False)
             for key, df in df_dict.items():
                 df.to_excel(writer, sheet_name=key, index=False)
 
 
+
     def clear(self):
-        global sheet_names,drop2,constrain_input,constrain_output,machine_str
+        global sheet_names
         raw_input.set("")
         master_input.set("")
         sheet_names = []
-        clicked2.set(' ')
-        drop2['menu'].delete(0,END)
         self.log.delete(1.0, END) 
         
 if __name__ == '__main__':
