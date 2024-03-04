@@ -30,6 +30,8 @@ class PMMoVCalc:
     wb = openpyxl.Workbook()
     red_fill = PatternFill(patternType='solid', fgColor= '00FF0000')
 
+    LOWER =27
+    UPPER =28.5
 
     def __init__(self, root):
         self.root = root
@@ -37,26 +39,46 @@ class PMMoVCalc:
 
         self.create_widgets()
 
+
+
+
     def create_widgets(self):
-        global raw_input,ofname,master_input,entry1,entry4,clicked2,buttonrow3,drop2,constrain_input,constrain_output,machine_str
-        raw_input = StringVar()
-        constrain_input = StringVar()
-        ofname = StringVar()
-        constrain_output = StringVar()
-        master_input = StringVar()
-        clicked2 = StringVar()
-        machine_str = StringVar()
+        global entry1,entry4,buttonrow3,drop2
+        self.raw_input = StringVar()
+        self.constrain_input = StringVar()
+        self.ofname = StringVar()
+        self.constrain_output = StringVar()
+        self.master_input = StringVar()
+        self.clicked2 = StringVar()
+        self.machine_str = StringVar()
+        self.machine1_slop = StringVar()
+        self.machine2_slop = StringVar()
+        self.machine1_int = StringVar()
+        self.machine2_int = StringVar()
+        self.lower_cal = StringVar()
+        self.upper_cal = StringVar()
+
+        self.machine1_slop.set(self.machine1["slop"])
+        self.machine2_slop.set(self.machine2["slop"])
+        self.machine1_int.set(self.machine1["y-int"])
+        self.machine2_int.set(self.machine2["y-int"])
+        self.lower_cal.set(self.LOWER)
+        self.upper_cal.set(self.UPPER)
         try:
-            raw_input.set(pickle.load(open( "pref.dat", "rb" )))
+            self.raw_input.set(pickle.load(open( "pref.dat", "rb" )))
         except:
             pass
 
         frm = ttk.Frame(self.root, padding=10)
         frm.pack(side=LEFT)
 
+        row2 = ttk.Frame(frm)
+        ttk.Button(row2, width=25, text="Setting", command=self.setting).pack(side=LEFT, padx=5)
+        row2.pack(side=TOP, padx=5, pady=5)
+
         row5 = ttk.Frame(frm)
         ttk.Button(row5, width=25, text="Load Master sheet:", command=self.inputmaster).pack(side=LEFT,padx=5)
-        entry5 = ttk.Entry(row5,width=40,textvariable=master_input)
+        entry5 = ttk.Entry(row5,width=40,textvariable=self.master_input)
         entry5.config(state="readonly")
         row5.pack(side=TOP, padx=5, pady=5)
         entry5.pack(side=RIGHT, expand=YES, fill=X)
@@ -64,20 +86,20 @@ class PMMoVCalc:
 
         buttonrow3 = ttk.Frame(frm)
         ttk.Button(buttonrow3, text="Load", command=self.loadconcerntrate).pack(side=LEFT,padx=15)
-        drop2 = OptionMenu(buttonrow3,clicked2, [])
+        drop2 = OptionMenu(buttonrow3,self.clicked2, [])
         drop2.pack(side=LEFT,pady=5)
         buttonrow3.pack(side=TOP,pady=5)
 
         row1 = ttk.Frame(frm)
         ttk.Button(row1, width=25, text="Load Raw data:", command=self.inputfile).pack(side=LEFT,padx=5)
-        entry1 = ttk.Entry(row1,width=40,textvariable=raw_input)
+        entry1 = ttk.Entry(row1,width=40,textvariable=self.raw_input)
         entry1.config(state="readonly")
         row1.pack(side=TOP, padx=5, pady=5)
         entry1.pack(side=RIGHT, expand=YES, fill=X)
 
         row4 = ttk.Frame(frm)
         ttk.Button(row4, width=25, text="Save results as:", command=self.saveresult).pack(side=LEFT,padx=5)
-        entry4 = ttk.Entry(row4,width=40,textvariable=ofname)
+        entry4 = ttk.Entry(row4,width=40,textvariable=self.ofname)
         entry4.config(state="readonly")
         row4.pack(side=TOP, padx=5, pady=5)
         entry4.pack(side=RIGHT, expand=YES, fill=X)
@@ -94,30 +116,93 @@ class PMMoVCalc:
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
     def inputmaster(self):
-        master_input.set(filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx"),("all files",
+        self.master_input.set(filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx"),("all files",
                                                             "*.*")]))
         
     def inputfile(self):
-        raw_input.set(filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx"),("all files",
+        self.raw_input.set(filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx"),("all files",
                                                             "*.*")]))
         entry1.xview_moveto(1)
         
     def saveresult(self):
-        ofname.set(filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("Excel files", "*.xlsx"),("all files",
+        self.ofname.set(filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("Excel files", "*.xlsx"),("all files",
                                                             "*.*")]))
         entry4.xview_moveto(1)
 
     def close(self):
-        pickle.dump(raw_input.get(),open("pref.dat", "wb"))
+        pickle.dump(self.raw_input.get(),open("pref.dat", "wb"))
         self.root.destroy()
 
     def logprint(self,text):
         self.log.insert(END, text + '\n')
 
+    def save(self):
+        newWindow.destroy()
+
+    def cancel(self):
+        self.set_default()
+        newWindow.destroy()
+
+    def set_default(self):
+        self.machine1_slop.set(self.machine1["slop"])
+        self.machine2_slop.set(self.machine2["slop"])
+        self.machine1_int.set(self.machine1["y-int"])
+        self.machine2_int.set(self.machine2["y-int"])
+        self.lower_cal.set(self.LOWER)
+        self.upper_cal.set(self.UPPER)
+
+
+    def setting(self):
+        global newWindow
+
+        newWindow = Toplevel(root)
+        newWindow.title("Setting Window")
+        row1 = ttk.Frame(newWindow)
+
+        Label(row1, text="QS3",width=20).pack(side=LEFT, padx=5)
+        Label(row1, text="QS5",width=20).pack(side=LEFT, padx=5)
+        row1.pack(side=TOP, padx=5, pady=5)
+
+        row2 = ttk.Frame(newWindow)
+        Label(row2,text="Slop").pack(side=LEFT, padx=5)
+        entry1 = ttk.Entry(row2,width=20,textvariable=self.machine1_slop)
+        entry1.pack(side=LEFT, expand=YES, fill=X)
+        Label(row2,text="Slop").pack(side=LEFT, padx=5)
+        entry2 = ttk.Entry(row2,width=20,textvariable=self.machine2_slop)
+        entry2.pack(side=LEFT, expand=YES, fill=X)
+        row2.pack(side=TOP, padx=5, pady=5)
+
+        row3 = ttk.Frame(newWindow)
+        Label(row3,text="Y-int").pack(side=LEFT, padx=5)
+        entry3 = ttk.Entry(row3,width=20,textvariable=self.machine1_int)
+        entry3.pack(side=LEFT, expand=YES, fill=X)
+        Label(row3,text="Y-int").pack(side=LEFT, padx=5)
+        entry4 = ttk.Entry(row3,width=20,textvariable=self.machine2_int)
+        entry4.pack(side=LEFT, expand=YES, fill=X)
+        row3.pack(side=TOP, padx=5, pady=5)
+
+        row5 = ttk.Frame(newWindow)
+        Label(row5,text="Lower Cal").pack(side=LEFT, padx=5)
+        entry5 = ttk.Entry(row5,width=20,textvariable=self.lower_cal)
+        entry5.pack(side=LEFT, expand=YES, fill=X)
+        Label(row5,text="Upper Cal").pack(side=LEFT, padx=5)
+        entry6 = ttk.Entry(row5,width=20,textvariable=self.upper_cal)
+        entry6.pack(side=LEFT, expand=YES, fill=X)
+        row5.pack(side=TOP, padx=5, pady=5)
+
+        row4 = ttk.Frame(newWindow)
+        ttk.Button(row4, text="Save", command=self.save).pack(side=LEFT,padx=15)
+        ttk.Button(row4, text="Cancel", command=self.cancel).pack(side=LEFT,padx=15)
+        row4.pack(side=TOP, padx=5, pady=5)
+
+        # self.set_default()
+
+
     def mapping(self):
-        global  machine,machine_str
+        global  machine
+        machine = {}
         try:
-            inpath = Path(raw_input.get())
+            inpath = Path(self.raw_input.get())
             df = pd.DataFrame()
             df = pd.read_excel(inpath, sheet_name=self.sheet_name)
         except:
@@ -146,10 +231,12 @@ class PMMoVCalc:
         if machine_row is not None:
             machine_val = machine_row.iloc[1]  # Assuming "Instrument Name" is in the second column
             if "3" in machine_val:
-                machine = self.machine1
+                machine["slop"] = float(self.machine1_slop.get())
+                machine["y-int"] = float(self.machine1_int.get())
             else:
-                machine = self.machine2
-            machine_str.set(f"{machine_val}")
+                machine["slop"] = float(self.machine2_slop.get())
+                machine["y-int"] = float(self.machine2_int.get())
+            self.machine_str.set(f"{machine_val}")
             
         return new_df
 
@@ -172,17 +259,17 @@ class PMMoVCalc:
                         cell = sheet.cell(row,column=2)
                         cell.fill = self.red_fill
 
-        wb.save(ofname.get())
+        wb.save(self.ofname.get())
 
     def checkcal(self,df,wb,sheet):
         for row, value in enumerate(df[self.search_word],start=2):
             if isinstance(value, str) and len(value) > 0:
                 if value.startswith("Cal"):
                     ct_mean = df.loc[row - 2, 'Ct Mean']
-                    if ct_mean < 27 or ct_mean > 28.5 :
+                    if ct_mean < float(self.lower_cal.get()) or ct_mean > float(self.upper_cal.get()) :
                         cell = sheet.cell(row,column=2)
                         cell.fill = self.red_fill
-        wb.save(ofname.get())
+        wb.save(self.ofname.get())
 
     def checkmean_and_sd(self,df,wb, sheet):
 
@@ -197,11 +284,11 @@ class PMMoVCalc:
                 cell = sheet.cell(row_number,column=3)
                 cell.fill = self.red_fill
         # Save the Excel file with modified formatting
-        wb.save(ofname.get())
+        wb.save(self.ofname.get())
 
     def checkresult(self,df):
         try:
-            wb = openpyxl.load_workbook(ofname.get())
+            wb = openpyxl.load_workbook(self.ofname.get())
 
             # Access the sheet
             sheet = wb['Sheet1']
@@ -212,17 +299,17 @@ class PMMoVCalc:
         self.checkcal(df,wb,sheet)
 
     def updatedropdown(self):
-        global clicked2, buttonrow3, drop2
+        global buttonrow3, drop2
         drop2['menu'].delete(0,'end')
-        clicked2.set(sheet_names[0])
+        self.clicked2.set(sheet_names[0])
         for name in sheet_names:
-            drop2['menu'].add_command(label=name, command=lambda name=name: clicked2.set(name))
+            drop2['menu'].add_command(label=name, command=lambda name=name: self.clicked2.set(name))
 
     def loadconcerntrate(self):
         global sheet_names, wb
         sheet_names = []
         try:
-            wb = openpyxl.load_workbook(master_input.get())
+            wb = openpyxl.load_workbook(self.master_input.get())
             sheet_names = wb.sheetnames
 
         except:
@@ -238,7 +325,7 @@ class PMMoVCalc:
         global wb
         try:
             df1 = df
-            sheet = wb[clicked2.get()]
+            sheet = wb[self.clicked2.get()]
             data = []
             for row in sheet.iter_rows(values_only=True):
                 data.append(row)
@@ -357,26 +444,26 @@ class PMMoVCalc:
                 if value.startswith("Cal"):
                     ct_mean = df3_filter.loc[row - 2, 'Ct Mean']
                     df3_filter["Calibrator Ct Mean"] = ct_mean
-        self.output_to_Excel(df3_filter,ofname.get())
+        self.output_to_Excel(df3_filter,self.ofname.get())
         self.checkresult(df3_filter)
         self.logprint("- Outputting result file done !")
         try:
-            os.system(f'start excel "{ofname.get()}"')
+            os.system(f'start excel "{self.ofname.get()}"')
         except Exception as e:
             print(f"An error occurred: {e}")
 
 
     def clear(self):
-        global sheet_names,drop2,constrain_input,constrain_output,machine_str
-        raw_input.set("")
-        constrain_input.set("")
-        ofname.set("")
+        global sheet_names
+        self.raw_input.set("")
+        self.constrain_input.set("")
+        self.ofname.set("")
         self.constrain_output.set("")
-        master_input.set("")
+        self.master_input.set("")
         sheet_names = []
-        clicked2.set(' ')
-        drop2['menu'].delete(0,END)
-        machine_str.set("")
+        self.clicked2.set(' ')
+        self.drop2['menu'].delete(0,END)
+        self.machine_str.set("")
         self.log.delete(1.0, END) 
         
 if __name__ == '__main__':

@@ -29,7 +29,8 @@ class Macro:
     COV_LIST = ["N1","N2","Phi6"]
     wb = openpyxl.Workbook()
     red_fill = PatternFill(patternType='solid', fgColor= '00FF0000')
-
+    green_fill = PatternFill(patternType='solid', fgColor='0039B54A')
+    blue_fill = PatternFill(patternType='solid', fgColor='000000FF')
 
     def __init__(self, root):
         self.root = root
@@ -256,9 +257,9 @@ class Macro:
                         control_mean_list[key] = match_df["Marker Detected?"].mean()
 
                 if any(value > 0.6 for value in droplet_mean_list.values()):
-                    df.loc[index,"DropletQCPass"] = "No"
-                else:
                     df.loc[index,"DropletQCPass"] = "Yes"
+                else:
+                    df.loc[index,"DropletQCPass"] = "No"
 
                 if any(prefix in sample_id for prefix in ["EXT", "NTC", "POS", "NEG"]):
 
@@ -269,11 +270,16 @@ class Macro:
                         df.loc[index,"SC2TargetDetected"] = "N/A"
                         df.loc[index,"NVG1TargetDetected"] = "N/A"
                         df.loc[index,"NVG2TargetDetected"] = "N/A"
-
-                    if any(value > 0.6 for value in control_mean_list.values()):
-                        df.loc[index,"ControlQCPass?"] = "No"
+                    if "POS" in sample_id:
+                        if any(value < 0.6 for value in control_mean_list.values()):
+                            df.loc[index,"ControlQCPass?"] = "No"
+                        else:
+                            df.loc[index,"ControlQCPass?"] = "Yes"
                     else:
-                        df.loc[index,"ControlQCPass?"] = "Yes"
+                        if any(value > 0.6 for value in control_mean_list.values()):
+                            df.loc[index,"ControlQCPass?"] = "No"
+                        else:
+                            df.loc[index,"ControlQCPass?"] = "Yes"
                 else:
                     if all((df.loc[df["Sample"].str.contains(prefix), "ControlQCPass?"] == "Yes").all() for prefix in ["EXT", "NTC", "POS", "NEG"]) and \
                         df.loc[index,["DropletQCPass"]].iloc[0] == "Yes":
@@ -290,7 +296,12 @@ class Macro:
 
                         for column in target_columns:
                             target_detected_column = f"{column}TargetDetected"
-                            target_value = "Yes" if control_mean_list.get(column, 0) > 0.3 else "No"
+                            
+                            if column in control_mean_list and control_mean_list[column] > 0.3:
+                                target_value = "Yes"
+                            else:
+                                target_value = "No" if column in control_mean_list else "/"
+                            
                             df.loc[index, target_detected_column] = target_value
                 if df.loc[index,"DropletQCPass"] == 'Yes' and df.loc[index, "ControlQCPass?"] == 'Yes':
                     df.loc[index,"QualityControlPassed"] = 'Yes'
@@ -309,10 +320,61 @@ class Macro:
         result_df = result_df.drop(columns=["ControlQCPass?","DropletQCPass"])
         return result_df
 
+    def check_target(self):
+        try:
+            wb = openpyxl.load_workbook(output_excel.get())
+        except:
+            self.logprint("cant open the file")
 
+        columns_to_check = ["RSVTargetDetected","SC2TargetDetected","NVG1TargetDetected","NVG2TargetDetected", "TargetDetected"]
+
+        for sheet_name in ["rsv", "cov"]:
+            sheet = wb[sheet_name]
+
+            column_indices = {col.internal_value: idx + 1 for idx, col in enumerate(sheet[1])}
+
+            # Iterate through the rows and columns to check
+
+            for col_name in columns_to_check:
+                col_idx = column_indices.get(col_name)
+                if col_idx is not None:
+                    for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=col_idx, max_col=col_idx):
+                        cell = row[0]
+                        # Check if the cell value is "Yes"
+                        if cell.value == "Yes":
+                            cell.fill = self.green_fill
+
+        wb.save(output_excel.get())
+
+
+    def chekc_lowerlimit(self):
+        try:
+            wb = openpyxl.load_workbook(output_excel.get())
+        except:
+            self.logprint("cant open the file")
+
+        
+        columns_to_check = ["N1GeneCopies","N2GeneCopies","RSVGeneCopies","SC2GeneCopies","NVG1GeneCopies","NVG2GeneCopies","Phi6GeneCopies"]
+   
+        for sheet_name in ["rsv", "cov"]:
+            sheet = wb[sheet_name]
+
+            column_indices = {col.internal_value: idx + 1 for idx, col in enumerate(sheet[1])}
+            for col_name in columns_to_check:
+                col_idx = column_indices.get(col_name)
+                compare_idx = column_indices.get("DetectionLowerLimit")
+                if col_idx is not None:
+                    for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row):
+
+                        cell = row[col_idx-1]
+                        cell_compare = row[compare_idx-1]
+                        if cell.value and cell_compare.value:
+                            if cell.value <= cell_compare.value:
+                                cell.fill = self.blue_fill
+
+        wb.save(output_excel.get())
 
     def result(self):
-        # writer = pd.ExcelWriter(output.get(), engine='xlsxwriter')
         master_df = pd.read_excel(output_excel.get(),sheet_name="input")
         cov_result_df = pd.DataFrame(columns = self.DDPCR_COL)
         rsv_result_df = pd.DataFrame(columns = self.RSV_COL)
@@ -352,11 +414,11 @@ class Macro:
             df_dict[key]["Final RNA Extraction Volume (ul)"] = 80
             df_dict[key]["Detection Limit (CP/100ml)"] = (0.6 * df_dict[key]['Final RNA Extraction Volume (ul)']) \
                 * ((df_dict[key]['Final Concentrate Volume (mL)'] / df_dict[key]['Volume used for Extraction (ml)']) / df_dict[key]['Initial Volume analyzed (mL)']) * 100
-            df_dict[key]["CP/100 ml of Sample"] = np.where(df_dict[key]['Accepted Droplets'] >= 3, \
+            df_dict[key]["CP/100 ml of Sample"] = np.where(df_dict[key]['Positives'] >= 3, \
                 (((df_dict[key]['CP/ul'] * df_dict[key]['Final RNA Extraction Volume (ul)']) * \
                 (df_dict[key]['Final Concentrate Volume (mL)'] / df_dict[key]['Volume used for Extraction (ml)'])) / df_dict[key]['Initial Volume analyzed (mL)']) * 100, df_dict[key]['Detection Limit (CP/100ml)'])
-            df_dict[key]["Marker Detected?"] = np.where((df_dict[key]['Accepted Droplets'] >= 3) & (df_dict[key]['Positives'] >= 8000), 1, 0)
-            df_dict[key]["Droplet QC Pass"] = np.where(df_dict[key]['Positives']>=8000,1,0)
+            df_dict[key]["Marker Detected?"] = np.where((df_dict[key]['Accepted Droplets'] >= 8000) & (df_dict[key]['Positives'] >= 3), 1, 0)
+            df_dict[key]["Droplet QC Pass"] = np.where(df_dict[key]['Accepted Droplets']>=8000,1,0)
 
             # print(df_dict[key]["Final Concentrate Volume (mL)"])
             result = df_dict[key].groupby('Sample')[['CP/100 ml of Sample', 'Detection Limit (CP/100ml)']].mean().reset_index()
@@ -431,6 +493,11 @@ class Macro:
         df = self.output_df_text(rsv_result_df)
         if rsv_output.get():
             df.to_csv(rsv_output.get(),sep='\t', index=False)
+
+
+        self.check_target()
+        self.chekc_lowerlimit()
+
         self.logprint("Done output")
 
     def clear(self):

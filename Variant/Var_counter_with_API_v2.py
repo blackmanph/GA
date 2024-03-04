@@ -309,12 +309,12 @@ class VariantSpotterApp:
 
     def addto_excel(self,sit,df,file):
         global sheet,workbook
-        pattern = r'^.*?15(.*?)(\d+)'
+        pattern = r'^.*?(\d+)(.*?)(\d+)'
         match = re.search(pattern,sit)
         start_col = 'A'
         if match:
-            code = match.group(1)
-            date = match.group(2)
+            code = match.group(2)
+            date = match.group(3)
             if file.lower().endswith("chim_rm.tsv"):
                 algorithm = 'Chimeras_Removed'
             elif file.lower().endswith("covar_deconv.tsv"):
@@ -432,6 +432,7 @@ class VariantSpotterApp:
         self.create_excel()
         for file in tsv_files:      
             try:
+                print(file)
                 df = pd.read_csv(inpath / file,sep='\t')
                 sit = df.columns[0]
                 df = pd.read_csv(inpath / file,sep='\t',header=1)
