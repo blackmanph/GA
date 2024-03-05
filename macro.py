@@ -29,8 +29,8 @@ class Macro:
     COV_LIST = ["N1","N2","Phi6"]
     wb = openpyxl.Workbook()
     red_fill = PatternFill(patternType='solid', fgColor= '00FF0000')
-    green_fill = PatternFill(patternType='solid', fgColor='0039B54A')
-    blue_fill = PatternFill(patternType='solid', fgColor='000000FF')
+    green_fill = PatternFill(patternType='solid', fgColor='00CCFFCC')
+    blue_fill = PatternFill(patternType='solid', fgColor='0099CCFF')
 
     def __init__(self, root):
         self.root = root
@@ -183,7 +183,7 @@ class Macro:
 
     # Define a custom sort key function
     def custom_sort_key(self,sample_id):
-        custom_sort_order = ["EXT", "POS", "NTC", "NEG"]
+        custom_sort_order = ["EXT", "NTC", "POS", "NEG"]
         prefix = next((p for p in custom_sort_order if sample_id.startswith(p)), None)
         if prefix is None:
             # Use a default value for sorting if prefix is not found
