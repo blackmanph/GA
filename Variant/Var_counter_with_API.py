@@ -14,7 +14,7 @@ from tkcalendar import DateEntry
 
 end_date = None
 start_date = None
-base_url = 'https://lapis.cov-spectrum.org/open/v1/sample/' 
+base_url = 'https://lapis.cov-spectrum.org/open/v2/sample/' 
 mutation_url = None
 lineage_url = 'aa-mutations?pangoLineage='
 format_fild = '&dataFormat=csv'
