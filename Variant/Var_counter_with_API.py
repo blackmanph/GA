@@ -16,7 +16,7 @@ end_date = None
 start_date = None
 base_url = 'https://lapis.cov-spectrum.org/open/v2/sample/' 
 mutation_url = None
-lineage_url = 'aa-mutations?pangoLineage='
+lineage_url = 'aminoAcidMutations?pangoLineage='
 format_fild = '&dataFormat=csv'
 search_words = ['Sequences','Unique Sequence']
 workbook = None
