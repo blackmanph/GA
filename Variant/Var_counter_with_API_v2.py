@@ -162,10 +162,10 @@ class VariantSpotterApp:
             cell = sheet[f'F{counter}']
             cell.value = sequence
             count = row[1]['Count']
-            aamutation_list = self.parse(sequence)
-            aamutation_list = self.check_del(aamutation_list)
-            # print(aamutation_list)
-            api = self.generateURL(aamutation_list,mutation_url,self.format_fild)
+            aminoAcidMutation_list = self.parse(sequence)
+            aminoAcidMutation_list = self.check_del(aminoAcidMutation_list)
+            # print(aminoAcidMutation_list)
+            api = self.generateURL(aminoAcidMutation_list,mutation_url,self.format_fild)
             # print(api)
             response = self.API_call(api)
             if response.status_code == 200:
@@ -203,7 +203,7 @@ class VariantSpotterApp:
                                     
                                     # Create a CSV reader and iterate through the rows
                                     mutation_df = pd.read_csv(csv_file)
-                                    result_list = self.check_mutation(aamutation_list,mutation_df)
+                                    result_list = self.check_mutation(aminoAcidMutation_list,mutation_df)
                                 if(not result_list):
                                     # print(f'Sequence:{indexs+1} {rows["pangoLineage"]} Percentage:{count/total_count*100:.1f}')
                                     matchstr = f'{rows["pangoLineage"]}/{matchstr}'
@@ -397,7 +397,7 @@ class VariantSpotterApp:
         if region.get():
             region_link = f',region'
 
-        mutation_url = f'aggregated?&dateFrom={self.start_date}&dateTo={self.end_date}&fields=pangoLineage{region_link}{country_link}{division_link}&aaMutations='
+        mutation_url = f'aggregated?&dateFrom={self.start_date}&dateTo={self.end_date}&fields=pangoLineage{region_link}{country_link}{division_link}&aminoAcidMutations='
         inpath = Path(raw_input.get())
         counter = 2
         self.logprint("Adding data to file...")
