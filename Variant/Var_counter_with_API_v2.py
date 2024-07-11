@@ -15,9 +15,9 @@ from datetime import date
 class VariantSpotterApp:
     end_date = date.today()
     start_date = end_date - relativedelta(months=6)
-    base_url = 'https://lapis.cov-spectrum.org/open/v1/sample/' 
+    base_url = 'https://lapis.cov-spectrum.org/open/v2/sample/' 
     mutation_url = None
-    lineage_url = 'aa-mutations?pangoLineage='
+    lineage_url = 'aminoAcidMutations?pangoLineage='
     format_fild = '&dataFormat=csv'
     search_words = ['Sequences','Unique Sequence']
     workbook = None
